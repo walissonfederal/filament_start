@@ -11,6 +11,7 @@ class Service extends Model implements HasAvatar
     protected $fillable = [
         'name',
         'picture',
+        'price_main',
     ];
 
     public function getFilamentAvatarUrl(): ?string
@@ -23,5 +24,21 @@ class Service extends Model implements HasAvatar
 
             return $picture->get($this);
         }
+    }
+
+    public function orders()
+    {
+        return $this->belongsToMany(
+            Order::class,
+            'order_service',
+            'service_id',
+            'order_id',
+        )->withPivot([
+            'service_id',
+            'order_id',
+            'observations',
+            'quantity',
+            'price',
+        ]);
     }
 }

@@ -30,6 +30,12 @@ class ServiceResource extends Resource
                     ->label("Nome")
                     ->required()
                     ->maxLength(191),
+
+                Forms\Components\TextInput::make('price_main')
+                    ->label('Preço Principal')
+                    ->numeric()
+                    ->required(),
+
                 FileUpload::make('picture')
                     ->label("Imagem Principal")
                     ->directory('products/pictures')
@@ -62,6 +68,14 @@ class ServiceResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label("Nome")
                     ->searchable(),
+
+                Tables\Columns\TextColumn::make('price_main')
+                    ->label('Preço Principal')
+                    ->formatStateUsing(fn($state) => is_null($state) ?
+                        '-' :
+                        "R$ " . number_format($state, 2, ',', '.')
+                    ),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

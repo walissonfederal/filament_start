@@ -2,14 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\StatusOrderEnum;
+use App\Enums\TypeOrderEnum;
 use App\Filament\Resources\OrderResource\Pages;
+use App\Filament\Resources\OrderResource\RelationManagers\ProductsRelationManager;
+use App\Filament\Resources\OrderResource\RelationManagers\ServicesRelationManager;
 use App\Models\Order;
-use Closure;
+use App\Rules\ReferenceRule;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class OrderResource extends Resource
@@ -27,6 +33,7 @@ class OrderResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('client_id')
+                    ->label("Cliente")
                     ->relationship('client', 'name')
                     ->searchable()
                     ->createOptionForm(ClientResource::fieldsForm())
@@ -34,36 +41,34 @@ class OrderResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('status')
+                    ->label('Situação')
+                    ->default(StatusOrderEnum::CRIADA)
+                    ->required()
+                    ->options(function () {
+                        return collect(StatusOrderEnum::cases())
+                            ->mapWithKeys(fn($case) => [$case->value => $case->name])
+                            ->toArray();
+                    })
                     ->required(),
 
                 Forms\Components\Select::make('type')
+                    ->label('Tipo')
+                    ->default(TypeOrderEnum::MENSAL)
+                    ->required()
+                    ->options(function () {
+                        return collect(TypeOrderEnum::cases())
+                            ->mapWithKeys(fn($case) => [$case->value => $case->name])
+                            ->toArray();
+                    })
                     ->required(),
 
                 TextInput::make('reference')
                     ->label('Referência')
+                    ->default(now()->format('m/Y'))
                     ->required()
                     ->mask('99/9999')
                     ->placeholder('MM/AAAA')
-                    ->rule(function (string $attribute, $value, Closure $fail) {
-                        // Valida formato
-                        if (!preg_match('/^(0[1-9]|1[0-2])\/\d{4}$/', $value)) {
-                            $fail('O formato deve ser MM/AAAA.');
-                            return;
-                        }
-
-                        // Extrai mês e ano
-                        [
-                            $mes,
-                            $ano
-                        ] = explode('/', $value);
-
-                        $anoAtual = (int)date('Y');
-
-                        // Valida ano
-                        if ((int)$ano < $anoAtual) {
-                            $fail("O ano deve ser igual ou maior que {$anoAtual}.");
-                        }
-                    }),
+                    ->rules([new ReferenceRule(),]),
             ]);
     }
 
@@ -71,36 +76,71 @@ class OrderResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('client.name')
-                    ->label("Nome do Cliente")
+                TextColumn::make('id')
+                    ->label('#')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
+
+                TextColumn::make('client.name')
+                    ->label('Nome do Cliente')
+                    ->description('Clique no nome para copiar', position: 'below')
+                    ->copyable()
+                    ->copyMessage('Nome copiado!')
+                    ->copyMessageDuration(1500)
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('client.document')
+                    ->label('Documento do Cliente')
+                    ->description('Clique no documento para copiar', position: 'below')
+                    ->copyable()
+                    ->copyMessage('Documento copiado!')
+                    ->copyMessageDuration(1500)
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('reference')
+                    ->label('Referência')
+                    ->searchable()
+                    ->sortable(),
+
+                BadgeColumn::make('status')
+                    ->label('Situação')
+                    ->formatStateUsing(fn($state, $record) => StatusOrderEnum::labelEnum($state))
+                    ->color(fn($state, $record) => StatusOrderEnum::colorEnum($state))
+                    ->sortable(),
+
+                BadgeColumn::make('type')
+                    ->formatStateUsing(fn($state, $record) => TypeOrderEnum::labelEnum($state))
+                    ->color(fn($state, $record) => TypeOrderEnum::colorEnum($state))
+                    ->label('Tipo')
+                    ->sortable(),
+
+                TextColumn::make('created_at')
+                    ->label('Criado em')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+
+                TextColumn::make('updated_at')
+                    ->label('Atualizado em')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([ /* ... */])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
     }
 
     public static function getRelations(): array
     {
         return [
-            //
+            ProductsRelationManager::class,
+            ServicesRelationManager::class,
         ];
     }
 

@@ -8,7 +8,6 @@ use App\Filament\Resources\ClientResource\RelationManagers\AddressesRelationMana
 use App\Filament\Resources\ClientResource\RelationManagers\ContactsRelationManager;
 use App\Models\Client;
 use App\Services\Permissions\CanTrait;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -20,7 +19,6 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Model;
 
 class ClientResource extends Resource
 {

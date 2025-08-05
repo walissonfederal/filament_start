@@ -18,7 +18,7 @@ return new class extends Migration {
 
             $table->string("reference");
             $table->integer("type");
-            $table->string("status");
+            $table->integer("status");
             $table->decimal('total_price', 12, 2)->default(0);
 
             $table->timestamps();

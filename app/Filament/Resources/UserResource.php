@@ -131,20 +131,7 @@ class UserResource extends Resource
                     EditAction::make()
                         ->hidden(fn(?Model $record = null): bool => isset($record->system) && $record->system),
                     DeleteAction::make()
-                        ->hidden(fn(?Model $record = null): bool => isset($record->system) && $record->system)
-                        ->action(
-                            function (DeleteAction $action) {
-                                //
-                            }
-                        )
-                        ->before(
-                            function (?Model $record = null) {
-                                $tenant = Filament::getTenant();
-                                if (isset($record->id)) {
-                                    $record->corporates()->detach([$tenant->id]);
-                                }
-                            }
-                        ),
+                        ->hidden(fn(?Model $record = null): bool => isset($record->system) && $record->system),
                     RestoreAction::make(),
                 ]
             )
