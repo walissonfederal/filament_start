@@ -32,16 +32,21 @@ class ProductsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
+
                 Tables\Columns\TextColumn::make('name')->label('Produto'),
+
+
                 Tables\Columns\TextColumn::make('pivot.quantity')
                     ->label('Quantidade')
                     ->sortable(),
+
                 Tables\Columns\TextColumn::make('pivot.price')
                     ->label('Preço no Pedido')
                     ->formatStateUsing(fn($state) => is_null($state) ?
                         '-' :
                         "R$ " . number_format($state, 2, ',', '.')
                     ),
+
                 Tables\Columns\TextColumn::make('pivot.observations')
                     ->label('Observações')
                     ->description('Clique na observação para copiar', position: 'below')
