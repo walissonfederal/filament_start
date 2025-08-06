@@ -12,6 +12,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
@@ -21,6 +22,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 class StockResource extends Resource
@@ -61,6 +63,15 @@ class StockResource extends Resource
                     if ($product && isset($product->price_main)) {
                         $set('price', $product->price_main);
                     }
+                })
+                ->editOptionForm(function (Get $get) {
+                    $product = Product::find($get("product_id"));
+                    return ProductResource::fieldsForm($product);
+                })
+                ->updateOptionUsing(function ($data, Get $get) {
+                    $product = Product::find($get("product_id"));
+                    $product->update($data);
+                    return $product;
                 })
                 ->createOptionForm(ProductResource::fieldsForm())
                 ->createOptionUsing(function (array $data) {
@@ -114,11 +125,48 @@ class StockResource extends Resource
                 $query->orderBy("updated_at", "desc");
             })
             ->columns([
-                TextColumn::make('product.name')
-                    ->label('Nome do Produto'),
+
+                Tables\Columns\TextColumn::make('product.name')
+                    ->label('Nome do Produto')
+                    ->description('Clique para copiar', position: 'below')
+                    ->formatStateUsing(fn($state) => $state ?? '-')
+                    ->limit(15)
+                    ->tooltip(fn($state) => is_string($state) && mb_strlen($state) > 15 ? $state : null)
+                    ->copyable()
+                    ->copyMessage('Nome do produto copiado!')
+                    ->copyMessageDuration(1500),
 
                 TextColumn::make('quantity')
                     ->label('Quantidade'),
+
+                TextColumn::make('id')
+                    ->label('Saldo')
+                    ->formatStateUsing(function (Model $record) {
+                        $entry   = Stock::where("product_id", $record->product_id)
+                            ->where("type_transaction", TypeTransactionStockEnum::ENTRADA)
+                            ->sum("quantity");
+                        $exit    = Stock::where("product_id", $record->product_id)
+                            ->where("type_transaction", TypeTransactionStockEnum::SAIDA)
+                            ->sum("quantity");
+                        $balance = $entry - $exit;
+                        return is_numeric($balance) ? $balance : 0;
+                    })
+                    ->color("danger")
+                    ->sortable(),
+
+                TextColumn::make('price')
+                    ->label('Preço Unitário')
+                    ->formatStateUsing(fn($state) => "R$ " . number_format($state, 2, '.', ','))
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('total_product')
+                    ->label('Total')
+                    ->formatStateUsing(function ($state) {
+                        return is_null($state)
+                            ? '-'
+                            : 'R$ ' . number_format($state, 2, ',', '.');
+                    }),
 
                 BadgeColumn::make('type_transaction')
                     ->label('Tipo de Transação')
@@ -127,7 +175,7 @@ class StockResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('entry_date')
-                    ->label('Data de entrada')
+                    ->label('Data/Transação')
                     ->formatStateUsing(function ($state) {
                         return Carbon::parse($state)->format('d/m/Y H:i:s');
                     }),
@@ -200,12 +248,12 @@ class StockResource extends Resource
             ], layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                //Tables\Actions\EditAction::make(),
+                //Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    //Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -222,7 +270,8 @@ class StockResource extends Resource
         return [
             'index'  => Pages\ListStocks::route('/'),
             'create' => Pages\CreateStock::route('/create'),
-            'edit'   => Pages\EditStock::route('/{record}/edit'),
+            //'edit'   => Pages\EditStock::route('/{record}/edit'),
+            'view'   => Pages\ViewStock::route('/{record}'),
         ];
     }
 }

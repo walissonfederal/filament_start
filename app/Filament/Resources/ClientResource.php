@@ -67,7 +67,20 @@ class ClientResource extends Resource
                 })
                 ->maxLength(50)
                 ->required()
-                ->maxLength(100),
+                ->maxLength(100)
+                ->dehydrateStateUsing(fn($state) => preg_replace('/\D/', '', $state))
+                ->afterStateHydrated(function (TextInput $component, $state, Get $get) {
+                    $component->state(function () use ($state, $get) {
+                        $clean = preg_replace('/\D/', '', $state);
+                        if ($get('people_type') == 2 && strlen($clean) === 14) {
+                            return preg_replace("/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/", "$1.$2.$3/$4-$5", $clean);
+                        }
+                        elseif (strlen($clean) === 11) {
+                            return preg_replace("/^(\d{3})(\d{3})(\d{3})(\d{2})$/", "$1.$2.$3-$4", $clean);
+                        }
+                        return $state;
+                    });
+                }),
             TextInput::make('email')
                 ->label("E-mail")
                 ->unique(ignoreRecord: true)
@@ -88,11 +101,16 @@ class ClientResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label("Nome")
+                    ->sortable()
                     ->searchable(),
                 TextColumn::make('document')
                     ->label("CPF/CNPJ")
+                    ->sortable()
                     ->searchable(),
                 TextColumn::make('email')
+                    ->label("E-mail")
+                    ->sortable()
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()

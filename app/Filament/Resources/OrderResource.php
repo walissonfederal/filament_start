@@ -2,21 +2,28 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\CurrentMonthReferenceEnum;
 use App\Enums\StatusOrderEnum;
 use App\Enums\TypeOrderEnum;
 use App\Filament\Resources\OrderResource\Pages;
 use App\Filament\Resources\OrderResource\RelationManagers\ProductsRelationManager;
 use App\Filament\Resources\OrderResource\RelationManagers\ServicesRelationManager;
+use App\Models\Client;
 use App\Models\Order;
-use App\Rules\ReferenceRule;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrderResource extends Resource
 {
@@ -31,7 +38,14 @@ class OrderResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
+            ->schema(self::fieldsForm());
+    }
+
+    public static function fieldsForm(): array
+    {
+        return [
+            Forms\Components\Grid::make()->schema([
+
                 Forms\Components\Select::make('client_id')
                     ->label("Cliente")
                     ->relationship('client', 'name')
@@ -62,14 +76,30 @@ class OrderResource extends Resource
                     })
                     ->required(),
 
-                TextInput::make('reference')
-                    ->label('Referência')
-                    ->default(now()->format('m/Y'))
+            ])->columns(3),
+
+            Forms\Components\Grid::make()->schema([
+
+                Select::make('reference')
+                    ->live()
+                    ->label("Mês de Referência")
+                    ->default(now()->format("m/Y"))
+                    ->options(
+                        collect(CurrentMonthReferenceEnum::cases())
+                            ->mapWithKeys(fn(CurrentMonthReferenceEnum $cm) => [
+                                $cm->numberYear() => $cm->labelYear()
+                            ])->toArray()
+                    )
+                    ->required(),
+
+                TextInput::make('total_price')
+                    ->numeric()
+                    ->default(0.00)
+                    ->label('Total')
                     ->required()
-                    ->mask('99/9999')
-                    ->placeholder('MM/AAAA')
-                    ->rules([new ReferenceRule(),]),
-            ]);
+
+            ])->columns(3),
+        ];
     }
 
     public static function table(Table $table): Table
@@ -87,8 +117,7 @@ class OrderResource extends Resource
                     ->copyable()
                     ->copyMessage('Nome copiado!')
                     ->copyMessageDuration(1500)
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(),
 
                 TextColumn::make('client.document')
                     ->label('Documento do Cliente')
@@ -96,17 +125,22 @@ class OrderResource extends Resource
                     ->copyable()
                     ->copyMessage('Documento copiado!')
                     ->copyMessageDuration(1500)
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(),
 
                 TextColumn::make('reference')
                     ->label('Referência')
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('total_price')
+                    ->label('Total')
+                    ->formatStateUsing(fn($state) => "R$ " . number_format($state, 2, '.', ','))
+                    ->searchable()
+                    ->sortable(),
+
                 BadgeColumn::make('status')
                     ->label('Situação')
-                    ->formatStateUsing(fn($state, $record) => StatusOrderEnum::labelEnum($state))
+                    ->formatStateUsing(fn($state) => StatusOrderEnum::labelEnum($state))
                     ->color(fn($state, $record) => StatusOrderEnum::colorEnum($state))
                     ->sortable(),
 
@@ -128,7 +162,61 @@ class OrderResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([ /* ... */])
+            ->filters([
+
+                SelectFilter::make('client_id')
+                    ->label('Nome do Cliente')
+                    ->searchable()
+                    ->optionsLimit(5)
+                    ->getSearchResultsUsing(function (string $search) {
+                        return Client::query()
+                            ->where(function ($query) use ($search) {
+                                $query->where('name', 'like', "%{$search}%")
+                                    ->orWhere('document', 'like', "%{$search}%");
+                            })
+                            ->limit(5)
+                            ->pluck('name', 'id');
+                    })
+                    ->getOptionLabelUsing(function ($value): ?string {
+                        return Client::find($value)?->name;
+                    }),
+
+                SelectFilter::make('reference')
+                    ->label("Mês de Referência")
+                    ->options(
+                        collect(CurrentMonthReferenceEnum::cases())
+                            ->mapWithKeys(fn(CurrentMonthReferenceEnum $cm) => [
+                                $cm->numberYear() => $cm->labelYear()
+                            ])->toArray()
+                    )
+                    ->searchable()
+                    ->preload(),
+
+                /*Filter::make('')
+                    ->columnSpan(2)
+                    ->form([
+                        DatePicker::make('entry_date_start')
+                            ->label('Data de entrada (Inicial)'),
+                        DatePicker::make('entry_date_end')
+                            ->label('Data de entrada (Final)'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['entry_date_start'],
+                                function (Builder $query, $date): Builder {
+                                    return $query->whereDate('entry_date', '>=', $date);
+                                }
+                            )
+                            ->when(
+                                $data['entry_date_end'],
+                                function (Builder $query, $date): Builder {
+                                    return $query->whereDate('entry_date', '<=', $date);
+                                }
+                            );
+                    })->columns(2),*/
+
+            ], layout: FiltersLayout::AboveContentCollapsible)
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

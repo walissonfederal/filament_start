@@ -8,17 +8,22 @@ class ClientObserver
 {
     public function creating(Model $model)
     {
-        //
+        $model->document = str_replace([".","-","/"], ["","",""], $model->document);
     }
 
     public function created(Model $model): void
     {
-        //
+        $model->document = str_replace([".","-","/"], ["","",""], $model->document);
+    }
+
+    public function updating(Model $model): void
+    {
+        $model->document = str_replace([".","-","/"], ["","",""], $model->document);
     }
 
     public function updated(Model $model): void
     {
-        //
+        $model->document = str_replace([".","-","/"], ["","",""], $model->document);
     }
 
     public function deleted(Model $model): void

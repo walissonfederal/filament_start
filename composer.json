@@ -10,7 +10,12 @@
         "filament/filament": "^3.3",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "tucker-eric/eloquentfilter": "^3.4",
+        "marcogermani87/filament-cookie-consent": "^1.0",
+        "guava/filament-knowledge-base": "^1.11",
+        "swisnl/filament-backgrounds": "^1.1",
+        "joaopaulolndev/filament-pdf-viewer": "^1.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

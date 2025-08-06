@@ -16,4 +16,11 @@ class EditOrder extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected $listeners = ['orderTotalUpdated' => 'updateTotalPrice'];
+
+    public function updateTotalPrice(array $data)
+    {
+        $this->form->fill($data);
+    }
 }

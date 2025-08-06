@@ -28,26 +28,30 @@ class ProductResource extends Resource
             ->schema(self::fieldsForm());
     }
 
-    public static function fieldsForm($type = "local"): array
+    public static function fieldsForm(?Product $product = null): array
     {
         return [
             Forms\Components\TextInput::make('name')
                 ->label("Nome")
+                ->default($product->name ?? null)
                 ->required()
                 ->maxLength(191),
 
             Forms\Components\TextInput::make('code')
                 ->label("Código de Identificação")
+                ->default($product->code ?? null)
                 ->required()
                 ->maxLength(191),
 
             Forms\Components\TextInput::make('price_main')
                 ->label('Preço Principal')
+                ->default($product->price_main ?? null)
                 ->numeric()
                 ->required(),
 
             FileUpload::make('picture')
                 ->label("Imagem Principal")
+                ->default($product->picture ?? null)
                 ->directory('products/pictures')
                 ->columnSpanFull()
                 ->image()
@@ -72,19 +76,22 @@ class ProductResource extends Resource
                     ->disk('public')
                     ->height(50)
                     ->width(50)
-                /*
-                                    ->rounded()*/,
+                /*->rounded()*/,
 
                 Tables\Columns\TextColumn::make('name')
                     ->label("Nome")
+                    ->sortable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('code')
                     ->label("Código de Identificação")
+                    ->sortable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('price_main')
                     ->label('Preço Principal')
+                    ->sortable()
+                    ->searchable()
                     ->formatStateUsing(fn($state) => is_null($state) ?
                         '-' :
                         "R$ " . number_format($state, 2, ',', '.')

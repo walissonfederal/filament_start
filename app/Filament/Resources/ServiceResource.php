@@ -62,15 +62,17 @@ class ServiceResource extends Resource
                     ->disk('public')
                     ->height(50)
                     ->width(50)
-                /*
-                                    ->rounded()*/,
+                /*->rounded()*/,
 
                 Tables\Columns\TextColumn::make('name')
                     ->label("Nome")
+                    ->sortable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('price_main')
                     ->label('Preço Principal')
+                    ->sortable()
+                    ->searchable()
                     ->formatStateUsing(fn($state) => is_null($state) ?
                         '-' :
                         "R$ " . number_format($state, 2, ',', '.')

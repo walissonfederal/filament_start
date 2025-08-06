@@ -1,0 +1,9 @@
+/* resources/css/filament/admin/theme.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.admin-theme {
+    --primary-color: #1d4ed8; /* Cor personalizada */
+    --secondary-color: #f97316;
+}

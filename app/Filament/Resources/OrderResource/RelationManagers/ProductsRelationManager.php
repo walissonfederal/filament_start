@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\OrderResource\RelationManagers;
 
 use App\Enums\TypeTransactionStockEnum;
+use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Models\Stock;
 use Filament\Forms;
@@ -24,9 +25,24 @@ class ProductsRelationManager extends RelationManager
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
+                Forms\Components\TextInput::make('quantity')
+                    ->label('Quantidade')
+                    ->disabled()
                     ->required()
-                    ->maxLength(255),
+                    ->dehydrated()
+                    ->numeric(),
+                Forms\Components\TextInput::make('price')
+                    ->label('Preço')
+                    ->disabled()
+                    ->required()
+                    ->dehydrated()
+                    ->numeric(),
+                Forms\Components\Textarea::make('observations')
+                    ->disabled()
+                    ->required()
+                    ->dehydrated()
+                    ->label('Observações')
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -36,19 +52,35 @@ class ProductsRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
 
-                Tables\Columns\TextColumn::make('name')->label('Produto'),
-
-
-                Tables\Columns\TextColumn::make('pivot.quantity')
-                    ->label('Quantidade')
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Produto')
+                    ->description('Clique para copiar', position: 'below')
+                    ->formatStateUsing(fn($state) => $state ?? '-')
+                    ->limit(15)
+                    ->tooltip(fn($state) => is_string($state) && mb_strlen($state) > 15 ? $state : null)
+                    ->copyable()
+                    ->copyMessage('Nome do produto copiado!')
+                    ->copyMessageDuration(1500)
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('pivot.price')
-                    ->label('Preço no Pedido')
+                Tables\Columns\TextColumn::make('pivot.quantity')
+                    ->label('Quantidade'),
+
+                Tables\Columns\TextColumn::make('price')
+                    ->label('Preço Unitário')
                     ->formatStateUsing(fn($state) => is_null($state) ?
                         '-' :
                         "R$ " . number_format($state, 2, ',', '.')
                     ),
+
+                Tables\Columns\TextColumn::make('pivot.price')
+                    ->label('Total Produto')
+                    ->formatStateUsing(function (Model $record, $state) {
+                        $total = $record->price * $record->quantity;
+                        return is_null($total) ?
+                            '-' :
+                            "R$ " . number_format($total, 2, ',', '.');
+                    }),
 
                 Tables\Columns\TextColumn::make('pivot.observations')
                     ->label('Observações')
@@ -58,8 +90,7 @@ class ProductsRelationManager extends RelationManager
                     ->tooltip(fn($state) => is_string($state) && mb_strlen($state) > 30 ? $state : null)
                     ->copyable()
                     ->copyMessage('Observação copiada!')
-                    ->copyMessageDuration(1500)
-                    ->sortable(),
+                    ->copyMessageDuration(1500),
             ])
             ->headerActions([
                 Tables\Actions\AttachAction::make()
@@ -160,8 +191,6 @@ class ProductsRelationManager extends RelationManager
                             ->label('Observações'),
                     ])
                     ->after(function (array $data = []) {
-                        $order = $this->getOwnerRecord();
-
                         Stock::create([
                             "product_id"       => $data["recordId"],
                             "quantity"         => $data["quantity"],
@@ -170,43 +199,51 @@ class ProductsRelationManager extends RelationManager
                             'type_transaction' => TypeTransactionStockEnum::SAIDA,
                             "observations"     => $data["observations"],
                         ]);
+
+                        $order    = $this->getOwnerRecord();
+                        $newPrice = round($order->total_price + ($data["price"] * $data["quantity"]), 2);
+                        $order->update(["total_price" => $newPrice]);
+                        $this->dispatch('orderTotalUpdated', data: [
+                            'client_id'   => $order->client_id,
+                            'reference'   => $order->reference,
+                            'type'        => $order->type,
+                            'status'      => $order->status,
+                            'total_price' => $newPrice,
+                        ]);
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->modalHeading("Modificar Produto Adicionado")
-                    ->label("modificar")
-                    ->form([
-                        Forms\Components\TextInput::make('quantity')
-                            ->label('Quantidade')
-                            ->disabled()
-                            ->required()
-                            ->dehydrated()
-                            ->numeric(),
-                        Forms\Components\TextInput::make('price')
-                            ->label('Preço')
-                            ->disabled()
-                            ->required()
-                            ->dehydrated()
-                            ->numeric(),
-                        Forms\Components\Textarea::make('observations')
-                            ->disabled()
-                            ->required()
-                            ->dehydrated()
-                            ->label('Observações'),
-                    ]),
+                Tables\Actions\ViewAction::make(),
 
                 Tables\Actions\DetachAction::make()
-                    ->after(function (Model $record) {
-                        $order = $this->getOwnerRecord();
+                    ->action(function (Model $record, array $data = []) {
+                        $ordersProducts = OrderProduct::where("order_id", $record->order_id)
+                            ->where("product_id", $record->pivot->product_id)
+                            ->get();
 
-                        Stock::create([
-                            "product_id"       => $record->product_id,
-                            "quantity"         => $record->quantity,
-                            'entry_date'       => now(),
-                            'price'            => $record->price,
-                            'type_transaction' => TypeTransactionStockEnum::ENTRADA,
-                            "observations"     => $record->observations,
+                        $totalPrice = 0;
+                        foreach ($ordersProducts as $orderProduct) {
+                            $totalPrice += $orderProduct->price * $orderProduct->quantity;
+                            Stock::create([
+                                "product_id"       => $orderProduct->product_id,
+                                "quantity"         => $orderProduct->quantity,
+                                'entry_date'       => now(),
+                                'price'            => $orderProduct->price,
+                                'type_transaction' => TypeTransactionStockEnum::ENTRADA,
+                                "observations"     => $orderProduct->observations,
+                            ]);
+                            $orderProduct->delete();
+                        }
+
+                        $order    = $this->getOwnerRecord();
+                        $newPrice = round($order->total_price - $totalPrice, 2);
+                        $order->update(["total_price" => $newPrice]);
+                        $this->dispatch('orderTotalUpdated', data: [
+                            'client_id'   => $order->client_id,
+                            'reference'   => $order->reference,
+                            'type'        => $order->type,
+                            'status'      => $order->status,
+                            'total_price' => $newPrice,
                         ]);
                     }),
             ])
