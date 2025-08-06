@@ -12,6 +12,7 @@ class Product extends Model implements HasAvatar
         'name',
         'picture',
         'price_main',
+        'code',
     ];
 
     public function getFilamentAvatarUrl(): ?string
@@ -40,5 +41,14 @@ class Product extends Model implements HasAvatar
             'quantity',
             'price',
         ]);
+    }
+
+    public function stock()
+    {
+        return $this->hasMany(
+            Stock::class,
+            'product_id',
+            'id',
+        );
     }
 }

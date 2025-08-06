@@ -25,32 +25,42 @@ class ProductResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->label("Nome")
-                    ->required()
-                    ->maxLength(191),
+            ->schema(self::fieldsForm());
+    }
 
-                Forms\Components\TextInput::make('price_main')
-                    ->label('Preço Principal')
-                    ->numeric()
-                    ->required(),
+    public static function fieldsForm($type = "local"): array
+    {
+        return [
+            Forms\Components\TextInput::make('name')
+                ->label("Nome")
+                ->required()
+                ->maxLength(191),
 
-                FileUpload::make('picture')
-                    ->label("Imagem Principal")
-                    ->directory('products/pictures')
-                    ->columnSpanFull()
-                    ->image()
-                    ->imageEditor()
-                    ->imageEditorAspectRatios(
-                        [
-                            '1:1',
-                        ]
-                    )
-                    ->openable()
-                    ->previewable(true)
-                    ->label('Foto do perfil'),
-            ]);
+            Forms\Components\TextInput::make('code')
+                ->label("Código de Identificação")
+                ->required()
+                ->maxLength(191),
+
+            Forms\Components\TextInput::make('price_main')
+                ->label('Preço Principal')
+                ->numeric()
+                ->required(),
+
+            FileUpload::make('picture')
+                ->label("Imagem Principal")
+                ->directory('products/pictures')
+                ->columnSpanFull()
+                ->image()
+                ->imageEditor()
+                ->imageEditorAspectRatios(
+                    [
+                        '1:1',
+                    ]
+                )
+                ->openable()
+                ->previewable(true)
+                ->label('Foto do perfil'),
+        ];
     }
 
     public static function table(Table $table): Table
@@ -67,6 +77,10 @@ class ProductResource extends Resource
 
                 Tables\Columns\TextColumn::make('name')
                     ->label("Nome")
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('code')
+                    ->label("Código de Identificação")
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('price_main')

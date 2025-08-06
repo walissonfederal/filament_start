@@ -17,6 +17,8 @@ return new class extends Migration
 
             $table->decimal('price_main', 12, 2)->nullable();
 
+            $table->string('code')->nullable();
+
             $table->timestamps();
         });
     }

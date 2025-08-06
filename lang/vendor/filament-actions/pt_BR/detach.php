@@ -4,16 +4,16 @@ return [
 
     'single' => [
 
-        'label' => 'Desvincular',
+        'label' => 'Remover',
 
         'modal' => [
 
-            'heading' => 'Desvincular :label',
+            'heading' => 'Remover :label',
 
             'actions' => [
 
                 'detach' => [
-                    'label' => 'Desvincular',
+                    'label' => 'Remover',
                 ],
 
             ],
@@ -23,7 +23,7 @@ return [
         'notifications' => [
 
             'detached' => [
-                'title' => 'Desvinculado',
+                'title' => 'Removido',
             ],
 
         ],
@@ -32,16 +32,16 @@ return [
 
     'multiple' => [
 
-        'label' => 'Desvincular selecionado',
+        'label' => 'Remover selecionado',
 
         'modal' => [
 
-            'heading' => 'Desvincular :label selecionado',
+            'heading' => 'Remover :label selecionado',
 
             'actions' => [
 
                 'detach' => [
-                    'label' => 'Desvincular',
+                    'label' => 'Remover',
                 ],
 
             ],
@@ -51,7 +51,7 @@ return [
         'notifications' => [
 
             'detached' => [
-                'title' => 'Desvinculado',
+                'title' => 'Removido',
             ],
 
         ],

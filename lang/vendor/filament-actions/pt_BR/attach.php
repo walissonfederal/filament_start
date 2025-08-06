@@ -4,11 +4,11 @@ return [
 
     'single' => [
 
-        'label' => 'Vincular',
+        'label' => 'Incluir',
 
         'modal' => [
 
-            'heading' => 'Vincular :label',
+            'heading' => 'Incluir :label',
 
             'fields' => [
 
@@ -21,11 +21,11 @@ return [
             'actions' => [
 
                 'attach' => [
-                    'label' => 'Vincular',
+                    'label' => 'Incluir',
                 ],
 
                 'attach_another' => [
-                    'label' => 'Salvar e vincular outro',
+                    'label' => 'Salvar e incluir outro',
                 ],
 
             ],
@@ -35,7 +35,7 @@ return [
         'notifications' => [
 
             'attached' => [
-                'title' => 'Vinculado',
+                'title' => 'Incluido',
             ],
 
         ],
