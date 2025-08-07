@@ -218,6 +218,7 @@ class OrderResource extends Resource
                     })->columns(2),
 
             ], layout: FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(3)
             ->filtersTriggerAction(
                 fn(Action $action) => $action
                     ->button()
