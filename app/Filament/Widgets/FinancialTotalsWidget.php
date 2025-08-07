@@ -10,6 +10,7 @@ class FinancialTotalsWidget extends Widget
 {
     protected static string $view      = 'filament.widgets.financial-totals-widget';
     protected               $listeners = ['transactionUpdated' => 'updateTotals'];
+    protected static ?int      $sort       = 6;
 
     public $inputs;
     public $outputs;

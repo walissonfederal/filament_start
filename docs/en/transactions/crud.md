@@ -1,5 +1,5 @@
 ---
-title: Lista de Transações
+title: Transações - DOC
 icon: heroicon-o-video-camera
 group: Transações
 ---
@@ -16,7 +16,6 @@ group: Transações
 
 # Documentação
 
-A lista de ==TRANSAÇÕES== serve para listar todas as transações
-financeiras do usuário Logado!
+Aqui vamos aprender como as ==TRANSAÇÕES== financeiras funcionam!
 
 > ⚠️ **Warning:** Documentação pode sofrer alterações no futuro!

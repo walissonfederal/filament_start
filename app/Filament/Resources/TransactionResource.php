@@ -24,6 +24,7 @@ use Filament\Infolists\Components\Section;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -36,6 +37,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Guava\FilamentKnowledgeBase\Contracts\HasKnowledgeBase;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Joaopaulolndev\FilamentPdfViewer\Forms\Components\PdfViewerField;
 use Joaopaulolndev\FilamentPdfViewer\Infolists\Components\PdfViewerEntry;
@@ -132,8 +134,20 @@ class TransactionResource extends Resource implements HasKnowledgeBase
                     ->schema([
                         TextInput::make('name')
                             ->label('Descrição da Transação')
+                            ->datalist(
+                                \App\Models\Transaction::query()
+                                    ->select('name')
+                                    ->distinct()
+                                    ->limit(10)
+                                    ->orderBy('name')
+                                    ->pluck('name')
+                                    ->filter()
+                                    ->values()
+                                    ->toArray()
+                            )
                             ->required()
                             ->maxLength(191),
+
                         TextInput::make('value')
                             ->required()
                             ->reactive()
@@ -174,6 +188,7 @@ class TransactionResource extends Resource implements HasKnowledgeBase
                             ->acceptedFileTypes(['application/pdf'])
                             ->required(fn(Get $get) => $get("type") == 2),
                         PdfViewerField::make('recipient_view')
+                            ->visible(fn(Model $record) => isset($record->recipient))
                             ->dehydrated(false)
                             ->reactive()
                             ->live()
@@ -219,18 +234,37 @@ class TransactionResource extends Resource implements HasKnowledgeBase
             ->columns([
                 TextColumn::make('name')
                     ->label("Descrição")
+                    ->limit(15)
+                    ->tooltip(fn($state) => is_string($state) && mb_strlen($state) > 15 ? $state : null)
                     ->searchable(),
-                TextColumn::make('necessary')
-                    ->label("Necessário")
-                    ->formatStateUsing(function (string $state): string {
-                        $label = NecessaryTransactionEnum::from($state)->label();
-                        return $label;
+
+                TextColumn::make('order_id')
+                    ->label("Pedido Vinculado")
+                    ->formatStateUsing(function (string $state = null): string {
+                        if ($state) {
+                            $order  = Order::find($state) ?? null;
+                            $name   = $order->client->name ?? null;
+                            $string = "Pedido: {$order->id} | Cliente: {$name}";
+                            return $string ?? "-";
+                        }
+
+                        return "-";
                     })
-                    ->badge()
-                    ->color(function (string $state): string {
-                        $cor = NecessaryTransactionEnum::from($state)->color();
-                        return $cor;
-                    }),
+                    ->limit(15)
+                    ->tooltip(function (string $state = null): string {
+                        if ($state) {
+                            $order  = Order::find($state) ?? null;
+                            $name   = $order->client->name ?? null;
+                            $string = "Pedido: {$order->id} | Cliente: {$name}";
+                            return $string ?? "-";
+                        }
+
+                        return "Nenhum dado a ser mostrado!";
+                    })
+                    ->copyable()
+                    ->copyMessage('Clique para copiar!')
+                    ->copyMessageDuration(1500),
+
                 TextColumn::make('type')
                     ->label("Tipo")
                     ->badge()
@@ -298,6 +332,7 @@ class TransactionResource extends Resource implements HasKnowledgeBase
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+
                 SelectFilter::make('monthly')
                     ->label("Recorrente?")
                     ->options([
@@ -336,23 +371,44 @@ class TransactionResource extends Resource implements HasKnowledgeBase
                             ->pluck("name", "name")
                             ->toArray()
                     ),
+                SelectFilter::make('order_id')
+                    ->label('Ped. Vinculado. (ID Pedido / Nome.Cliente)')
+                    ->searchable()
+                    ->getSearchResultsUsing(function (string $search) {
+                        return Order::with('client')
+                            ->whereHas('client', fn($q) => $q->where('name', 'like', "%{$search}%"))
+                            ->orWhere('id', 'like', "%{$search}%")
+                            ->limit(10)
+                            ->get()
+                            ->mapWithKeys(function ($order) {
+                                return [$order->id => "{$order->id} - {$order->client?->name}"];
+                            })
+                            ->toArray();
+                    })
+                    ->getOptionLabelUsing(function ($value): ?string {
+                        $order = Order::with('client')->find($value);
+                        return $order ? "{$order->id} - {$order->client?->name}" : null;
+                    }),
+
             ], layout: FiltersLayout::AboveContentCollapsible)
-            ->defaultSort("current_month", "DESC")
+            ->filtersFormColumns(3)
             ->filtersTriggerAction(
                 fn(Action $action) => $action
                     ->button()
                     ->label('Filtrar...'),
             )
+            ->defaultSort("current_month", "DESC")
             ->actions([
-                //ViewAction::make(),
-                EditAction::make()
-                    ->after(function () {
-                        return redirect("/admin/transactions");
-                    }),
-                DeleteAction::make()
-                    ->after(function () {
-                        return redirect("/admin/transactions");
-                    }),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->after(function () {
+                            return redirect("/admin/transactions");
+                        }),
+                    DeleteAction::make()
+                        ->after(function () {
+                            return redirect("/admin/transactions");
+                        }),
+                ])
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -375,7 +431,6 @@ class TransactionResource extends Resource implements HasKnowledgeBase
     {
         return [
             'index'  => Pages\ListTransactions::route('/'),
-            //'view'   => Pages\ViewRecipient::route('/{record}'),
             'create' => Pages\CreateTransaction::route('/create'),
             'edit'   => Pages\EditTransaction::route('/{record}/edit'),
         ];
@@ -384,10 +439,7 @@ class TransactionResource extends Resource implements HasKnowledgeBase
     public static function getDocumentation(): array|string
     {
         return [
-            'transactions.list',
-            'transactions.create',
-            'transactions.edit',
-            'transactions.delete',
+            'transactions.crud',
         ];
     }
 }

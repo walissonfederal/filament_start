@@ -9,9 +9,10 @@ use Filament\Widgets\ChartWidget;
 
 class InputsTotalsWidget extends ChartWidget
 {
-    protected static ?string   $heading         = 'Adquirir X Realidade (Patrimônio)';
+    protected static ?string   $heading         = 'Entradas x Saídas';
     protected static string    $color           = 'info';
     protected int|string|array $columnSpan      = '4';
+    protected static ?int      $sort            = 7;
     protected static ?string   $pollingInterval = null;
     protected static ?string   $maxHeight       = "200px";
 
@@ -22,9 +23,25 @@ class InputsTotalsWidget extends ChartWidget
             return ucfirst($month->label());
         }, $currentMonths);
 
+        $input  = $this->transactionsGroupsType(TypeTransactionEnum::input);
+        $output = $this->transactionsGroupsType(TypeTransactionEnum::output);
+
         return [
             'datasets' => [
-
+                [
+                    'label'           => 'Entradas',
+                    'data'            => array_values($input),
+                    'backgroundColor' => 'green',
+                    'borderColor'     => 'green',
+                    //"tension"         => 2,
+                ],
+                [
+                    'label'           => 'Saídas',
+                    'data'            => array_values($output),
+                    'backgroundColor' => 'red',
+                    'borderColor'     => 'red',
+                    //"tension"         => 1,
+                ],
             ],
             'labels'   => array_values($labels),
         ];
@@ -38,13 +55,13 @@ class InputsTotalsWidget extends ChartWidget
     protected function transactionsGroupsType(TypeTransactionEnum $type): ?array
     {
         $monthly = Transaction::where("monthly", 1)
-                              ->where("type", $type->value)
-                              ->sum("value");
+            ->where("type", $type->value)
+            ->sum("value");
 
         $transactionsGroups =
             Transaction::where("type", $type->value)
-                       ->get()
-                       ->groupBy("current_month");
+                ->get()
+                ->groupBy("current_month");
 
         $year = now()->year;
 

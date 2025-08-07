@@ -12,6 +12,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
@@ -19,6 +20,7 @@ use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -96,7 +98,7 @@ class UserResource extends Resource
                 [
                     ImageColumn::make('avatar')
                         ->label('Avatar')
-                        ->getStateUsing(fn ($record) => $record->getFilamentAvatarUrl())
+                        ->getStateUsing(fn($record) => $record->getFilamentAvatarUrl())
                         ->height(50)
                         ->width(50)
                         ->rounded(),
@@ -121,10 +123,13 @@ class UserResource extends Resource
                         ->toggleable(isToggledHiddenByDefault: true),
                 ]
             )
-            ->filters(
-                [
-                    //
-                ]
+            ->filters([
+
+            ], layout: FiltersLayout::AboveContentCollapsible)
+            ->filtersTriggerAction(
+                fn(Action $action) => $action
+                    ->button()
+                    ->label('Filtrar...'),
             )
             ->actions(
                 [

@@ -17,6 +17,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
@@ -192,31 +193,36 @@ class OrderResource extends Resource
                     ->searchable()
                     ->preload(),
 
-                /*Filter::make('')
+                Filter::make('Data Criação')
                     ->columnSpan(2)
                     ->form([
-                        DatePicker::make('entry_date_start')
-                            ->label('Data de entrada (Inicial)'),
-                        DatePicker::make('entry_date_end')
-                            ->label('Data de entrada (Final)'),
+                        DatePicker::make('created_at_start')
+                            ->label('Data Criação (Inicial)'),
+                        DatePicker::make('created_at_end')
+                            ->label('Data Criação (Final)'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['entry_date_start'],
+                                $data['created_at_start'],
                                 function (Builder $query, $date): Builder {
-                                    return $query->whereDate('entry_date', '>=', $date);
+                                    return $query->whereDate('created_at', '>=', $date);
                                 }
                             )
                             ->when(
-                                $data['entry_date_end'],
+                                $data['created_at_end'],
                                 function (Builder $query, $date): Builder {
-                                    return $query->whereDate('entry_date', '<=', $date);
+                                    return $query->whereDate('created_at', '<=', $date);
                                 }
                             );
-                    })->columns(2),*/
+                    })->columns(2),
 
             ], layout: FiltersLayout::AboveContentCollapsible)
+            ->filtersTriggerAction(
+                fn(Action $action) => $action
+                    ->button()
+                    ->label('Filtrar...'),
+            )
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

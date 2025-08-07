@@ -15,6 +15,7 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
@@ -247,6 +248,11 @@ class StockResource extends Resource
 
             ], layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)
+            ->filtersTriggerAction(
+                fn(Action $action) => $action
+                    ->button()
+                    ->label('Filtrar...'),
+            )
             ->actions([
                 //Tables\Actions\EditAction::make(),
                 //Tables\Actions\DeleteAction::make(),
