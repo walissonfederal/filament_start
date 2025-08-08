@@ -21,6 +21,8 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ClientResource extends Resource
 {
@@ -35,6 +37,75 @@ class ClientResource extends Resource
     protected static ?string  $pluralLabel                     = "Clientes";
     protected static ?string  $navigationLabel                 = "Clientes";
     protected static ?string  $slug                            = "clients";
+    protected static ?string  $recordTitleAttribute            = 'name';
+    protected static int      $globalSearchResultsLimit        = 20;
+
+    public static function getGlobalSearchResultUrl(Model $record): string
+    {
+        return Pages\SearchFichaRapidaResults::getUrl(['client_id' => $record->id]);
+    }
+
+    public static function getGlobalSearchResultActions(Model $record): array
+    {
+        $query = [
+            "tableFilters" => [
+                "client_id" => [
+                    "value" => $record->id
+                ]
+            ]
+        ];
+
+        return [
+            Action::make('orders')
+                ->hiddenLabel()
+                ->icon("heroicon-o-truck")
+                ->tooltip('Ir para os pedidos desse cliente!')
+                ->url(OrderResource::getUrl('index', $query)),
+            Action::make('transactions')
+                ->hiddenLabel()
+                ->icon("heroicon-o-currency-dollar")
+                ->tooltip('Ir para faturas desse cliente!')
+                ->url(TransactionResource::getUrl('index', $query)),
+            Action::make('new_tab')
+                ->hiddenLabel()
+                ->icon('heroicon-o-plus-circle')
+                ->tooltip('Abrir em nova aba')
+                ->url(ClientResource::getUrl('edit', ["record" => $record->id]), shouldOpenInNewTab: true),
+        ];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Documento'           => $record->document,
+            'Situação Cadastral'  => "-",
+            'Situação Financeira' => "-",
+        ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return [
+            'name',
+            'document'
+        ];
+    }
+
+
+    public static function getGlobalSearchResultTitle(Model $record): string|Htmlable
+    {
+        return $record->name;
+    }
+
+    public static function getGlobalSearchEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()
+            ->with([
+                'contacts',
+                'addresses',
+                'orders',
+            ]);
+    }
 
     public static function fieldsForm(): array
     {
@@ -153,10 +224,11 @@ class ClientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListClients::route('/'),
-            'create' => Pages\CreateClient::route('/create'),
-            'edit'   => Pages\EditClient::route('/{record}/edit'),
-            'view'   => Pages\ViewClient::route('/{record}'),
+            'index'                    => Pages\ListClients::route('/'),
+            'create'                   => Pages\CreateClient::route('/create'),
+            'edit'                     => Pages\EditClient::route('/{record}/edit'),
+            'view'                     => Pages\ViewClient::route('/{record}'),
+            'searchFichaRapidaResults' => Pages\SearchFichaRapidaResults::route('/search-ficha-rapida-results/{client_id}'),
         ];
     }
 }

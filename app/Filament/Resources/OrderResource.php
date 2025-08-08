@@ -106,129 +106,148 @@ class OrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('id')
-                    ->label('#')
-                    ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('client.name')
-                    ->label('Nome do Cliente')
-                    ->description('Clique no nome para copiar', position: 'below')
-                    ->copyable()
-                    ->copyMessage('Nome copiado!')
-                    ->copyMessageDuration(1500)
-                    ->searchable(),
-
-                TextColumn::make('client.document')
-                    ->label('Documento do Cliente')
-                    ->description('Clique no documento para copiar', position: 'below')
-                    ->copyable()
-                    ->copyMessage('Documento copiado!')
-                    ->copyMessageDuration(1500)
-                    ->searchable(),
-
-                TextColumn::make('reference')
-                    ->label('Referência')
-                    ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('total_price')
-                    ->label('Total')
-                    ->formatStateUsing(fn($state) => "R$ " . number_format($state, 2, '.', ','))
-                    ->searchable()
-                    ->sortable(),
-
-                BadgeColumn::make('status')
-                    ->label('Situação')
-                    ->formatStateUsing(fn($state) => StatusOrderEnum::labelEnum($state))
-                    ->color(fn($state, $record) => StatusOrderEnum::colorEnum($state))
-                    ->sortable(),
-
-                BadgeColumn::make('type')
-                    ->formatStateUsing(fn($state, $record) => TypeOrderEnum::labelEnum($state))
-                    ->color(fn($state, $record) => TypeOrderEnum::colorEnum($state))
-                    ->label('Tipo')
-                    ->sortable(),
-
-                TextColumn::make('created_at')
-                    ->label('Criado em')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('updated_at')
-                    ->label('Atualizado em')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-
-                SelectFilter::make('client_id')
-                    ->label('Nome do Cliente')
-                    ->searchable()
-                    ->optionsLimit(5)
-                    ->getSearchResultsUsing(function (string $search) {
-                        return Client::query()
-                            ->where(function ($query) use ($search) {
-                                $query->where('name', 'like', "%{$search}%")
-                                    ->orWhere('document', 'like', "%{$search}%");
-                            })
-                            ->limit(5)
-                            ->pluck('name', 'id');
-                    })
-                    ->getOptionLabelUsing(function ($value): ?string {
-                        return Client::find($value)?->name;
-                    }),
-
-                SelectFilter::make('reference')
-                    ->label("Mês de Referência")
-                    ->options(
-                        collect(CurrentMonthReferenceEnum::cases())
-                            ->mapWithKeys(fn(CurrentMonthReferenceEnum $cm) => [
-                                $cm->numberYear() => $cm->labelYear()
-                            ])->toArray()
-                    )
-                    ->searchable()
-                    ->preload(),
-
-                Filter::make('Data Criação')
-                    ->columnSpan(2)
-                    ->form([
-                        DatePicker::make('created_at_start')
-                            ->label('Data Criação (Inicial)'),
-                        DatePicker::make('created_at_end')
-                            ->label('Data Criação (Final)'),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['created_at_start'],
-                                function (Builder $query, $date): Builder {
-                                    return $query->whereDate('created_at', '>=', $date);
-                                }
-                            )
-                            ->when(
-                                $data['created_at_end'],
-                                function (Builder $query, $date): Builder {
-                                    return $query->whereDate('created_at', '<=', $date);
-                                }
-                            );
-                    })->columns(2),
-
-            ], layout: FiltersLayout::AboveContentCollapsible)
+            ->columns(self::fieldsColumns())
+            ->filters(self::fieldsFilter(), layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)
             ->filtersTriggerAction(
                 fn(Action $action) => $action
                     ->button()
                     ->label('Filtrar...'),
             )
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
+            ->actions(self::fieldsActions())
+            ->bulkActions(self::fieldsBulkActions());
+    }
+
+    public static function fieldsColumns(): array
+    {
+        return [
+            TextColumn::make('id')
+                ->label('#')
+                ->searchable()
+                ->sortable(),
+
+            TextColumn::make('client.name')
+                ->label('Nome do Cliente')
+                ->description('Clique no nome para copiar', position: 'below')
+                ->copyable()
+                ->copyMessage('Nome copiado!')
+                ->copyMessageDuration(1500)
+                ->searchable(),
+
+            TextColumn::make('client.document')
+                ->label('Documento do Cliente')
+                ->description('Clique no documento para copiar', position: 'below')
+                ->copyable()
+                ->copyMessage('Documento copiado!')
+                ->copyMessageDuration(1500)
+                ->searchable(),
+
+            TextColumn::make('reference')
+                ->label('Referência')
+                ->searchable()
+                ->sortable(),
+
+            TextColumn::make('total_price')
+                ->label('Total')
+                ->formatStateUsing(fn($state) => "R$ " . number_format($state, 2, '.', ','))
+                ->searchable()
+                ->sortable(),
+
+            BadgeColumn::make('status')
+                ->label('Situação')
+                ->formatStateUsing(fn($state) => StatusOrderEnum::labelEnum($state))
+                ->color(fn($state, $record) => StatusOrderEnum::colorEnum($state))
+                ->sortable(),
+
+            BadgeColumn::make('type')
+                ->formatStateUsing(fn($state, $record) => TypeOrderEnum::labelEnum($state))
+                ->color(fn($state, $record) => TypeOrderEnum::colorEnum($state))
+                ->label('Tipo')
+                ->sortable(),
+
+            TextColumn::make('created_at')
+                ->label('Criado em')
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            TextColumn::make('updated_at')
+                ->label('Atualizado em')
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+    }
+
+    public static function fieldsFilter(array $hidden = []): array
+    {
+        return [
+            SelectFilter::make('client_id')
+                ->label('Nome do Cliente')
+                ->hidden(in_array("client_id", $hidden))
+                ->searchable()
+                ->optionsLimit(5)
+                ->getSearchResultsUsing(function (string $search) {
+                    return Client::query()
+                        ->where(function ($query) use ($search) {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('document', 'like', "%{$search}%");
+                        })
+                        ->limit(5)
+                        ->pluck('name', 'id');
+                })
+                ->getOptionLabelUsing(function ($value): ?string {
+                    return Client::find($value)?->name;
+                }),
+            SelectFilter::make('reference')
+                ->label("Mês de Referência")
+                ->options(
+                    collect(CurrentMonthReferenceEnum::cases())
+                        ->mapWithKeys(fn(CurrentMonthReferenceEnum $cm) => [
+                            $cm->numberYear() => $cm->labelYear()
+                        ])->toArray()
+                )
+                ->searchable()
+                ->preload(),
+            Filter::make('Data Criação')
+                ->columnSpan(2)
+                ->form([
+                    DatePicker::make('created_at_start')
+                        ->label('Data Criação (Inicial)'),
+                    DatePicker::make('created_at_end')
+                        ->label('Data Criação (Final)'),
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['created_at_start'],
+                            function (Builder $query, $date): Builder {
+                                return $query->whereDate('created_at', '>=', $date);
+                            }
+                        )
+                        ->when(
+                            $data['created_at_end'],
+                            function (Builder $query, $date): Builder {
+                                return $query->whereDate('created_at', '<=', $date);
+                            }
+                        );
+                })->columns(2),
+        ];
+    }
+
+    public static function fieldsActions(): array
+    {
+        return [
+            Tables\Actions\EditAction::make(),
+            Tables\Actions\DeleteAction::make(),
+        ];
+    }
+
+    public static function fieldsBulkActions(): array
+    {
+        return [
+            Tables\Actions\DeleteBulkAction::make()
+        ];
     }
 
     public static function getRelations(): array

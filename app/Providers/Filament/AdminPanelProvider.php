@@ -6,16 +6,19 @@ use App\Filament\AvatarProviders\UiAvatarsProvider;
 use App\Filament\Pages\Auth\Register;
 use App\Filament\Pages\EditarPerfil;
 use App\Filament\Widgets\GitBranchWidget;
+use CharrafiMed\GlobalSearchModal\GlobalSearchModalPlugin;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Navigation\UserMenuItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Platform;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Guava\FilamentKnowledgeBase\Enums\TableOfContentsPosition;
@@ -123,8 +126,23 @@ class AdminPanelProvider extends PanelProvider
                         MyImages::make()
                             ->directory('images/backgrounds')
                     ),
-
+                GlobalSearchModalPlugin::make()
             ])
+            ->sidebarCollapsibleOnDesktop()
+            ->sidebarWidth('15rem')
+            //->collapsedSidebarWidth('9rem')
+            //->sidebarFullyCollapsibleOnDesktop() esconde tudo
+            //->breadcrumbs(false)
+            ->globalSearchKeyBindings([
+                'ctrl+k',
+                'command+k'
+            ])
+            ->globalSearchDebounce('750ms')
+            ->globalSearchFieldSuffix(fn(): ?string => match (Platform::detect()) {
+                Platform::Windows, Platform::Linux => 'CTRL+K',
+                Platform::Mac                      => '⌘K',
+                default                            => null,
+            })
             ->authMiddleware([
                 Authenticate::class,
             ]);

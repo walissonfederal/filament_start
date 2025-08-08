@@ -7,6 +7,7 @@ use App\Enums\NecessaryTransactionEnum;
 use App\Enums\StatusOrderEnum;
 use App\Enums\TypeTransactionEnum;
 use App\Filament\Resources\TransactionResource\Pages;
+use App\Models\Client;
 use App\Models\Order;
 use App\Models\Transaction;
 use App\Services\Permissions\CanTrait;
@@ -37,6 +38,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Guava\FilamentKnowledgeBase\Contracts\HasKnowledgeBase;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Joaopaulolndev\FilamentPdfViewer\Forms\Components\PdfViewerField;
@@ -231,166 +233,8 @@ class TransactionResource extends Resource implements HasKnowledgeBase
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('name')
-                    ->label("Descrição")
-                    ->limit(15)
-                    ->tooltip(fn($state) => is_string($state) && mb_strlen($state) > 15 ? $state : null)
-                    ->searchable(),
-
-                TextColumn::make('order_id')
-                    ->label("Pedido Vinculado")
-                    ->formatStateUsing(function (string $state = null): string {
-                        if ($state) {
-                            $order  = Order::find($state) ?? null;
-                            $name   = $order->client->name ?? null;
-                            $string = "Pedido: {$order->id} | Cliente: {$name}";
-                            return $string ?? "-";
-                        }
-
-                        return "-";
-                    })
-                    ->limit(15)
-                    ->tooltip(function (string $state = null): string {
-                        if ($state) {
-                            $order  = Order::find($state) ?? null;
-                            $name   = $order->client->name ?? null;
-                            $string = "Pedido: {$order->id} | Cliente: {$name}";
-                            return $string ?? "-";
-                        }
-
-                        return "Nenhum dado a ser mostrado!";
-                    })
-                    ->copyable()
-                    ->copyMessage('Clique para copiar!')
-                    ->copyMessageDuration(1500),
-
-                TextColumn::make('type')
-                    ->label("Tipo")
-                    ->badge()
-                    ->color(function (string $state): string {
-                        $cor = TypeTransactionEnum::from($state)->color();
-                        return $cor;
-                    })
-                    ->formatStateUsing(function (string $state): string {
-                        $preLabel = TypeTransactionEnum::from($state)->preLabel();
-                        return $preLabel;
-                    }),
-                TextInputColumn::make('value')
-                    ->label('Valor')
-                    ->afterStateUpdated(function (Set $set, string $state) {
-                        if ($state) {
-                            redirect("/admin/transactions");
-                        }
-                    })
-                    ->extraAttributes([
-                        'style' => 'width: 150px;',
-                    ]),
-                IconColumn::make('monthly')
-                    ->label("Recorrente?")
-                    ->boolean(),
-                ToggleColumn::make('paid')
-                    ->label("Pago?"),
-                TextColumn::make('due_day')
-                    ->label("Vencimento")
-                    ->date()
-                    ->formatStateUsing(function (string $state): string {
-                        if ($state) {
-                            $value = now()->format("$state/m/Y");
-                        }
-                        return $value ?? "";
-                    }),
-                TextColumn::make('date_finish_monthly')
-                    ->label("Fim da Recorrência")
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('payment_day')
-                    ->label("Pagamento")
-                    ->date()
-                    ->formatStateUsing(function (string $state): string {
-                        if ($state) {
-                            $value = now()->format("$state/m/Y");
-                        }
-                        return $value ?? "";
-                    })
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->label("Excluído")
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('created_at')
-                    ->label("Criado")
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->label("Atualizado")
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-
-                SelectFilter::make('monthly')
-                    ->label("Recorrente?")
-                    ->options([
-                        0 => "Não",
-                        1 => "Sim",
-                    ]),
-                SelectFilter::make('necessary')
-                    ->label("Necessário")
-                    ->options(collect(NecessaryTransactionEnum::cases())
-                        ->mapWithKeys(fn(NecessaryTransactionEnum $necessary) => [
-                            $necessary->value => $necessary->label()
-                        ])->toArray()
-                    ),
-                SelectFilter::make('type')
-                    ->label("Tipo")
-                    ->options(collect(TypeTransactionEnum::cases())
-                        ->mapWithKeys(fn(TypeTransactionEnum $type) => [
-                            $type->value => $type->label()
-                        ])->toArray()
-                    ),
-                SelectFilter::make("paid")
-                    //->default(0)
-                    ->placeholder("Já foi pago?")
-                    ->options([
-                        1 => "Pago",
-                        0 => "Não Pago",
-                    ])
-                    ->label("Pago?"),
-                SelectFilter::make('name')
-                    ->label("Descrição")
-                    ->preload()
-                    ->searchable()
-                    ->optionsLimit(5)
-                    ->options(
-                        Transaction::distinct()
-                            ->pluck("name", "name")
-                            ->toArray()
-                    ),
-                SelectFilter::make('order_id')
-                    ->label('Ped. Vinculado. (ID Pedido / Nome.Cliente)')
-                    ->searchable()
-                    ->getSearchResultsUsing(function (string $search) {
-                        return Order::with('client')
-                            ->whereHas('client', fn($q) => $q->where('name', 'like', "%{$search}%"))
-                            ->orWhere('id', 'like', "%{$search}%")
-                            ->limit(10)
-                            ->get()
-                            ->mapWithKeys(function ($order) {
-                                return [$order->id => "{$order->id} - {$order->client?->name}"];
-                            })
-                            ->toArray();
-                    })
-                    ->getOptionLabelUsing(function ($value): ?string {
-                        $order = Order::with('client')->find($value);
-                        return $order ? "{$order->id} - {$order->client?->name}" : null;
-                    }),
-
-            ], layout: FiltersLayout::AboveContentCollapsible)
+            ->columns(self::fieldsColumns())
+            ->filters(self::fieldsFilter(), layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)
             ->filtersTriggerAction(
                 fn(Action $action) => $action
@@ -398,26 +242,214 @@ class TransactionResource extends Resource implements HasKnowledgeBase
                     ->label('Filtrar...'),
             )
             ->defaultSort("current_month", "DESC")
-            ->actions([
-                ActionGroup::make([
-                    EditAction::make()
-                        ->after(function () {
-                            return redirect("/admin/transactions");
-                        }),
-                    DeleteAction::make()
-                        ->after(function () {
-                            return redirect("/admin/transactions");
-                        }),
-                ])
-            ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->after(function () {
-                            return redirect("/admin/transactions");
-                        }),
+            ->actions(self::fieldsActions())
+            ->bulkActions(self::fieldsBulkActions());
+    }
+
+    public static function fieldsColumns(): array
+    {
+        return [
+            TextColumn::make('name')
+                ->label("Descrição")
+                ->limit(15)
+                ->tooltip(fn($state) => is_string($state) && mb_strlen($state) > 15 ? $state : null)
+                ->searchable(),
+
+            TextColumn::make('order_id')
+                ->label("Pedido Vinculado")
+                ->formatStateUsing(function (string $state = null): string {
+                    if ($state) {
+                        $order  = Order::find($state) ?? null;
+                        $name   = $order->client->name ?? null;
+                        $string = "Pedido: {$order->id} | Cliente: {$name}";
+                        return $string ?? "-";
+                    }
+
+                    return "-";
+                })
+                ->limit(15)
+                ->tooltip(function (string $state = null): string {
+                    if ($state) {
+                        $order  = Order::find($state) ?? null;
+                        $name   = $order->client->name ?? null;
+                        $string = "Pedido: {$order->id} | Cliente: {$name}";
+                        return $string ?? "-";
+                    }
+
+                    return "Nenhum dado a ser mostrado!";
+                })
+                ->copyable()
+                ->copyMessage('Clique para copiar!')
+                ->copyMessageDuration(1500),
+
+            TextColumn::make('type')
+                ->label("Tipo")
+                ->badge()
+                ->color(function (string $state): string {
+                    $cor = TypeTransactionEnum::from($state)->color();
+                    return $cor;
+                })
+                ->formatStateUsing(function (string $state): string {
+                    $preLabel = TypeTransactionEnum::from($state)->preLabel();
+                    return $preLabel;
+                }),
+            TextInputColumn::make('value')
+                ->label('Valor')
+                ->afterStateUpdated(function (Set $set, string $state) {
+                    if ($state) {
+                        redirect("/admin/transactions");
+                    }
+                })
+                ->extraAttributes([
+                    'style' => 'width: 150px;',
                 ]),
-            ]);
+            IconColumn::make('monthly')
+                ->label("Recorrente?")
+                ->boolean(),
+            ToggleColumn::make('paid')
+                ->label("Pago?"),
+            TextColumn::make('due_day')
+                ->label("Vencimento")
+                ->date()
+                ->formatStateUsing(function (string $state): string {
+                    if ($state) {
+                        $value = now()->format("$state/m/Y");
+                    }
+                    return $value ?? "";
+                }),
+            TextColumn::make('created_at')
+                ->label("Criado")
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')
+                ->label("Atualizado")
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+    }
+
+    public static function fieldsFilter(array $hidden = []): array
+    {
+        return [
+
+            SelectFilter::make('client_id')
+                ->label('Nome do Cliente')
+                ->hidden(in_array("client_id", $hidden))
+                ->searchable()
+                ->optionsLimit(5)
+                ->getSearchResultsUsing(function (string $search) {
+                    return Client::query()
+                        ->where(function ($query) use ($search) {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('document', 'like', "%{$search}%");
+                        })
+                        ->limit(5)
+                        ->pluck('name', 'id');
+                })
+                ->getOptionLabelUsing(function ($value): ?string {
+                    return Client::find($value)?->name;
+                })
+                ->query(function (Builder $query, array $data) {
+                    $query->when(
+                        $data['value'] ?? null,
+                        function (Builder $whenQuery, $client_id): Builder {
+                            return $whenQuery->whereHas('order', function ($orderQuery) use ($client_id) {
+                                $orderQuery->where('client_id', $client_id);
+                            });
+                        }
+                    );
+
+                    return $query;
+                }),
+
+            SelectFilter::make('monthly')
+                ->label("Recorrente?")
+                ->options([
+                    0 => "Não",
+                    1 => "Sim",
+                ]),
+            SelectFilter::make('necessary')
+                ->label("Necessário")
+                ->options(collect(NecessaryTransactionEnum::cases())
+                    ->mapWithKeys(fn(NecessaryTransactionEnum $necessary) => [
+                        $necessary->value => $necessary->label()
+                    ])->toArray()
+                ),
+            SelectFilter::make('type')
+                ->label("Tipo")
+                ->options(collect(TypeTransactionEnum::cases())
+                    ->mapWithKeys(fn(TypeTransactionEnum $type) => [
+                        $type->value => $type->label()
+                    ])->toArray()
+                ),
+            SelectFilter::make("paid")
+                //->default(0)
+                ->placeholder("Já foi pago?")
+                ->options([
+                    1 => "Pago",
+                    0 => "Não Pago",
+                ])
+                ->label("Pago?"),
+            SelectFilter::make('name')
+                ->label("Descrição")
+                ->preload()
+                ->searchable()
+                ->optionsLimit(5)
+                ->options(
+                    Transaction::distinct()
+                        ->pluck("name", "name")
+                        ->toArray()
+                ),
+            SelectFilter::make('order_id')
+                ->label('Ped. Vinculado. (ID Pedido / Nome.Cliente)')
+                ->searchable()
+                ->getSearchResultsUsing(function (string $search) {
+                    return Order::with('client')
+                        ->whereHas('client', fn($q) => $q->where('name', 'like', "%{$search}%"))
+                        ->orWhere('id', 'like', "%{$search}%")
+                        ->limit(10)
+                        ->get()
+                        ->mapWithKeys(function ($order) {
+                            return [$order->id => "{$order->id} - {$order->client?->name}"];
+                        })
+                        ->toArray();
+                })
+                ->getOptionLabelUsing(function ($value): ?string {
+                    $order = Order::with('client')->find($value);
+                    return $order ? "{$order->id} - {$order->client?->name}" : null;
+                }),
+
+        ];
+    }
+
+    public static function fieldsActions(): array
+    {
+        return [
+            ActionGroup::make([
+                EditAction::make()
+                    ->after(function () {
+                        return redirect("/admin/transactions");
+                    }),
+                DeleteAction::make()
+                    ->after(function () {
+                        return redirect("/admin/transactions");
+                    }),
+            ])
+        ];
+    }
+
+    public static function fieldsBulkActions(): array
+    {
+        return [
+            BulkActionGroup::make([
+                DeleteBulkAction::make()
+                    ->after(function () {
+                        return redirect("/admin/transactions");
+                    }),
+            ]),
+        ];
     }
 
     public static function getRelations(): array

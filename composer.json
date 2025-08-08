@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "ext-curl": "*",
+        "charrafimed/global-search-modal": "^3.7",
         "filament/filament": "^3.3",
         "guava/filament-knowledge-base": "^1.11",
         "joaopaulolndev/filament-pdf-viewer": "^1.0",
