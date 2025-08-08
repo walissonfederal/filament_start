@@ -91,7 +91,7 @@ class AdminPanelProvider extends PanelProvider
             ->emailVerification()
             ->profile(EditarPerfil::class)
             ->databaseNotifications()
-            ->registration(Register::class)
+            //->registration(Register::class)
             ->defaultAvatarProvider(UiAvatarsProvider::class)
             ->colors([
                 'primary' => Color::Zinc,
