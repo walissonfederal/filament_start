@@ -29,6 +29,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use MarcoGermani87\FilamentCookieConsent\FilamentCookieConsent;
 use Swis\Filament\Backgrounds\FilamentBackgroundsPlugin;
@@ -78,6 +79,8 @@ class AdminPanelProvider extends PanelProvider
 
     public function panel(Panel $panel): Panel
     {
+        $logoPreta = "https://federalassociados.com.br/Corporates/images/federalassociados.png";
+        $logoBranca = "https://federalassociados.com.br/logos/aguiab.png";
         return $panel
             ->default()
             ->path('')
@@ -143,6 +146,15 @@ class AdminPanelProvider extends PanelProvider
                 Platform::Mac                      => '⌘K',
                 default                            => null,
             })
+            ->favicon($logoBranca)
+            //->brandName(env('APP_NAME', "Federal"))
+            ->brandLogo(fn () => new HtmlString(
+                "<img src='{$logoPreta}'/> " . env('APP_NAME', "Federal")
+            ))
+            ->darkModeBrandLogo(fn () => new HtmlString(
+                "<img src='{$logoBranca}'/> " . env('APP_NAME', "Federal")
+            ))
+            ->brandLogoHeight("2rem")
             ->authMiddleware([
                 Authenticate::class,
             ]);
