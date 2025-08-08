@@ -68,8 +68,8 @@ class ClientResource extends Resource
                 ->url(TransactionResource::getUrl('index', $query)),
             Action::make('new_tab')
                 ->hiddenLabel()
-                ->icon('heroicon-o-plus-circle')
-                ->tooltip('Abrir em nova aba')
+                ->icon('heroicon-o-pencil')
+                ->tooltip('Editar Cliente')
                 ->url(ClientResource::getUrl('edit', ["record" => $record->id]), shouldOpenInNewTab: true),
         ];
     }

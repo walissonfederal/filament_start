@@ -107,7 +107,9 @@ class OrderResource extends Resource
     {
         return $table
             ->columns(self::fieldsColumns())
-            ->filters(self::fieldsFilter(), layout: FiltersLayout::AboveContentCollapsible)
+            ->filters(
+                self::fieldsFilter(hidden: []),
+                layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)
             ->filtersTriggerAction(
                 fn(Action $action) => $action
