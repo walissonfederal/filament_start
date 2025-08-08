@@ -21,14 +21,14 @@ class AuthServiceProvider extends ServiceProvider
                 if ($user->hasAnyRoles('Administrator')) {
                     return true;
                 }
-
-                $permissions = Permission::with('roles')->get();
-                foreach ($permissions as $permission) {
-                    $gate->define($permission->name, function (User $user) use ($permission) {
-                        return $user->hasPermission($permission);
-                    });
-                }
             });
+
+            $permissions = Permission::with('roles')->get();
+            foreach ($permissions as $permission) {
+                $gate->define($permission->name, function (User $user) use ($permission) {
+                    return $user->hasPermission($permission);
+                });
+            }
         } catch (\Exception $e) {
             //
             //
